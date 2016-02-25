@@ -4,8 +4,6 @@
  * @description :: TODO: You might write a short summary of how this model works and what it represents here.
  * @docs        :: http://sailsjs.org/documentation/concepts/models-and-orm/models
  */
-var bcrypt = require('bcrypt');
-var SALT_WORK_FACTOR = 10;
 
 module.exports = {
 
@@ -23,24 +21,35 @@ module.exports = {
       size: 30,
       unique: true
     },
-    email: { 
-      type: 'email',
-      required: true,
-      unique: true
-    },
     password: {
       type: 'string',
       required: true,
-      minLength: 6,
-      maxLength: 50
     },
+    status: {
+      type: 'string',
+      enum: ['offline', 'online', 'ready', 'playing'],
+      defaultsTo: 'offline',
+      required: false
+    },
+    gameroom: {
+      collection: 'GameRoom',
+      via: 'owner'
+    }
   },
 
-  beforeCreate: function (attrs, cb) {
-	    bcrypt.hash(attrs.password, SALT_WORK_FACTOR, function (err, hash) {
-	      attrs.password = hash;
-	      return cb();    
-	    });
-	},
+  signup: function (inputs, cb) {
+
+    
+
+   
+  },
+
+  // Find if user exists
+  findUser: function(inputs, cb) {
+    User.findOne({
+      username: inputs.username
+    })
+    .exec(cb);
+  },
 };
 

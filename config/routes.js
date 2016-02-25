@@ -34,7 +34,14 @@ module.exports.routes = {
 
   '/': {
     view: 'homepage'
-  }
+  },
+
+  'post /signup': 'UserController.signup',
+  'post /login': 'UserController.login',
+  '/logout': 'UserController.logout',
+  '/game': 'GameController.index',
+  '/newroom': 'GameController.newroom',
+  '/joinroom': 'GameController.joinroom',
 
   /***************************************************************************
   *                                                                          *
