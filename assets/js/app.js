@@ -46,7 +46,7 @@ var socketIO = {
 
     joinGame: function(data) {
 
-        io.socket.post('/joinroom', {roomid: 2}, function(res, jwres) {
+        io.socket.post('/joinroom', {roomid: 1}, function(res, jwres) {
             console.log(res);
             console.log(jwres);
         });

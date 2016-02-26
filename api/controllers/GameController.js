@@ -21,7 +21,8 @@ module.exports = {
 
 		if(req.socket) {
 
-			socket = req.socket;
+			var socket = req.socket;
+			var io = sails.io;
 			userid = req.session.me;
 			console.log("Logged in as: "+userid);
 			username = req.session.name;
@@ -52,7 +53,8 @@ module.exports = {
 									socket.join(created.id.toString());
 									console.log("socket joined");
 									// debugger;
-									sails.sockets.broadcast(created.id.toString(), 'joined', {name: user.fullName});
+									io.sockets.in(created.id.toString()).emit('joined', {thisIs: 'theMessage'});
+									// sails.sockets.broadcast(created.id.toString(), 'joined', {name: user.fullName});
 									return res.send(200, {room: created});
 								}
 							});
@@ -72,6 +74,7 @@ module.exports = {
 	joinroom: function(req, res) {
 
 		var socket = req.socket;
+		var io = sails.io;
 		userId = req.session.me;
 		console.log(userId);
 		roomId = req.param('roomid');
@@ -122,8 +125,10 @@ module.exports = {
 											else if(activeroom) {
 												console.log("User added to room");
 												socket.join(room.id.toString());
-												debugger;
-												sails.sockets.broadcast(room.id.toString(), 'hello', {name: user.fullName});
+												io.sockets.in(room.id.toString()).emit('joined', {thisIs: 'theMessage'});
+												// sails.socket.emit('hello', {});
+												// debugger;
+												// sails.sockets.broadcast(room.id.toString(), 'hello', {name: user.fullName});
 												return res.ok("User added to room");
 											}
 											else {
