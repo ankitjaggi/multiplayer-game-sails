@@ -19,47 +19,59 @@ module.exports = {
 
 	newroom: function(req, res) {
 
-		userid = req.session.me;
-		console.log("Logged in as: "+userid);
-		username = req.session.name;
-		console.log(username);
-		User.findOne({id: userid}).exec(function (err, user){
-		 	if (err) {
-		 		console.log(err);
-			    return res.negotiate(err);
-			}
-			else if(user) {
-				GameRoom.create({
-					owner: user,
-					title: username+"'s Room"
-				}).exec(function (err, created) {
-					if (err) {
-						sails.log(err);
-						return res.send(err);
-					}
-					else {
-						sails.log(created);
-						ActiveRooms.create({room: created, user: user}).exec(function (err, activeroom){
-							if(err) {
-								console.log(err);
-							}
-							else {
-								return res.json({room: created});
-							}
-						});
-					}
-				});
-				
-			}
-			else {
-				sails.log("No user found!");
-			}
-			// res.send("Hello!");
-		});
+		if(req.socket) {
+
+			socket = req.socket;
+			userid = req.session.me;
+			console.log("Logged in as: "+userid);
+			username = req.session.name;
+			console.log(username);
+			User.findOne({id: userid}).exec(function (err, user){
+			 	if (err) {
+			 		console.log(err);
+				    return res.negotiate(err);
+				}
+				else if(user) {
+					GameRoom.create({
+						owner: user,
+						title: username+"'s Room"
+					}).exec(function (err, created) {
+						if (err) {
+							sails.log(err);
+							return res.send(400, {error: 'Room could not be created.'});
+						}
+						else {
+							sails.log(created);
+							ActiveRooms.create({room: created, user: user}).exec(function (err, activeroom){
+								if(err) {
+									console.log(err);
+								}
+								else {
+									socket.emit('newGameCreated', {roomId: created.id, mySocketId: socket.id});
+									console.log(created.id);
+									socket.join(created.id.toString());
+									console.log("socket joined");
+									// debugger;
+									sails.sockets.broadcast(created.id.toString(), 'joined', {name: user.fullName});
+									return res.send(200, {room: created});
+								}
+							});
+						}
+					});
+					
+				}
+				else {
+					sails.log("No user found!");
+				}
+				// res.send("Hello!");
+			});
+		}
+		
 	},
 
 	joinroom: function(req, res) {
-		
+
+		var socket = req.socket;
 		userId = req.session.me;
 		console.log(userId);
 		roomId = req.param('roomid');
@@ -109,6 +121,9 @@ module.exports = {
 											}
 											else if(activeroom) {
 												console.log("User added to room");
+												socket.join(room.id.toString());
+												debugger;
+												sails.sockets.broadcast(room.id.toString(), 'hello', {name: user.fullName});
 												return res.ok("User added to room");
 											}
 											else {

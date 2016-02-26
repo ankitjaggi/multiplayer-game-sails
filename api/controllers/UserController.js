@@ -5,6 +5,8 @@
  * @help        :: See http://sailsjs.org/#!/documentation/concepts/Controllers
  */
 
+var mygame = require('./SocketController');
+
 module.exports = {
 
 	login: function(req, res) {
@@ -49,10 +51,11 @@ module.exports = {
 	                return res.ok();
 	            }
 
-	            sails.io.sockets.on('connection', function (socket) {
-				    console.log('user connected');
-				    // mgame.initGame(sails.io, socket);
-				});
+	            console.log("socket: "+req.socket);
+	   //          sails.io.sockets.on('connection', function (socket) {
+				//     console.log('user logged in: '+user.userName);
+				//     mygame.initGame(sails.io, socket);
+				// });
 				// Otherwise if this is an HTML-wanting browser, redirect to /game.
 	            return res.redirect('/game');
 	        }

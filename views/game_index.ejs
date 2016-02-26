@@ -10,6 +10,9 @@
 
 <div id="host">
 <h3>Hosting game...</h3>
+<div id="players">
+
+</div>
 </div>
 
 <div id="join">
@@ -27,31 +30,33 @@
 <script>
 $("#host").hide();
 $("#join").hide();
-$("#createroom").click(function() {
-	console.log("Inside create room");
-	var url = '/newroom';
-	$.ajax({
-	  method: "POST",
-	  url: url,
-	})
-	  .done(function( msg ) {
-	    console.log(msg);
-	    if(msg.room != null) {
-	    	console.log(msg.room);
-	    	console.log(msg.room.title);
-	    	console.log("Room created");
-	    	$("#host").show();
-	    	$("#index").hide();
-	    }
-	    else {
-	    	console.log("Room not created.");
-	    }
-  	});
-});
+//$("#createroom").click(function() {
+//	console.log("Inside create room");
+	//var url = '/newroom';
+	//$.ajax({
+	  //method: "POST",
+	  //url: url,
+	//})
+	  //.done(function( msg ) {
+	    //console.log(msg);
+	    //if(msg.room != null) {
+	    //	console.log(msg.room);
+	    //	console.log(msg.room.title);
+	    //	console.log("Room created");
+	    //	$("#host").show();
+	    //	$("#index").hide();
+	    //}
+	    //else {
+	    //	console.log("Room not created.");
+	    //}
+  	//});
+
+//});
 
 $("#joinroom").click(function() {
 	$("#index").hide();
 	$("#host").hide();
 	$("#join").show();
+
 });
 </script>
