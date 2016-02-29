@@ -42,6 +42,8 @@ module.exports.routes = {
   '/game': 'GameController.index',
   '/newroom': 'GameController.newroom',
   '/joinroom': 'GameController.joinroom',
+  // '/isroomfull/:id': 'GameController.isRoomFull',
+  '/rooms': 'GameController.rooms',
 
   /***************************************************************************
   *                                                                          *

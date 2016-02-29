@@ -27,7 +27,7 @@ module.exports = {
     },
     status: {
       type: 'string',
-      enum: ['offline', 'online', 'ready', 'playing'],
+      enum: ['offline', 'online'],
       defaultsTo: 'offline',
       required: false
     },
@@ -37,12 +37,6 @@ module.exports = {
     }
   },
 
-  signup: function (inputs, cb) {
-
-    
-
-   
-  },
 
   // Find if user exists
   findUser: function(inputs, cb) {

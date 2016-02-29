@@ -43,18 +43,25 @@ module.exports = {
 						}
 						else {
 							sails.log(created);
+							created.status = 'waiting';
+							created.save();
+							GameRoom.publishCreate(created);
 							ActiveRooms.create({room: created, user: user}).exec(function (err, activeroom){
 								if(err) {
 									console.log(err);
 								}
 								else {
-									socket.emit('newGameCreated', {roomId: created.id, mySocketId: socket.id});
+									activeroom.status = 'joined room';
+									activeroom.save();
+									GameRoom.publishAdd(created.id, 'users', {id: activeroom.id, username: user.userName, status: activeroom.status});
+									// socket.emit('newGameCreated', {roomId: created.id, mySocketId: socket.id});
+									ActiveRooms.subscribe(req.socket, activeroom);
 									console.log(created.id);
 									socket.join(created.id.toString());
-									console.log("socket joined");
+									// console.log("socket joined");
 									// debugger;
-									io.sockets.in(created.id.toString()).emit('joined', {thisIs: 'theMessage'});
-									// sails.sockets.broadcast(created.id.toString(), 'joined', {name: user.fullName});
+									// io.sockets.in(created.id.toString()).emit('joined', {thisIs: 'theMessage'});
+									sails.sockets.broadcast(created.id.toString(), 'joined', {name: user.fullName});
 									return res.send(200, {room: created});
 								}
 							});
@@ -123,12 +130,16 @@ module.exports = {
 												return res.negotiate(activeerr);
 											}
 											else if(activeroom) {
+												activeroom.status = 'joined room';
+												activeroom.save();
 												console.log("User added to room");
-												socket.join(room.id.toString());
-												io.sockets.in(room.id.toString()).emit('joined', {thisIs: 'theMessage'});
+												// GameRoom.subscribe(req.socket, activeroom);
+												GameRoom.publishAdd(room.id, 'users', {id: activeroom.id, username: user.userName, status: activeroom.status});
+												// sails.sockets.join(socket, room.id.toString());
+												// io.sockets.in(room.id.toString()).emit('joined', {thisIs: 'theMessage'});
 												// sails.socket.emit('hello', {});
 												// debugger;
-												// sails.sockets.broadcast(room.id.toString(), 'hello', {name: user.fullName});
+												// sails.sockets.broadcast(room.id.toString(), 'joined', {name: user.fullName});
 												return res.ok("User added to room");
 											}
 											else {
@@ -152,8 +163,6 @@ module.exports = {
 				});
 
 				
-				
-				
 			}
 			else
 				return res.badRequest("Room not found");
@@ -162,12 +171,111 @@ module.exports = {
 	},
 
 	listavailablerooms: function(req, res) {
+		
+		GameRoom.watch(req.socket);
+
+		// ActiveRooms.query('select gameroom.id, gameroom.title, count(activerooms.room) as count from gameroom, activerooms where activerooms.room = gameroom.id and gameroom.status = "waiting" group by gameroom.id having count(activerooms.room) <= 3', function(err, results) {
+		// 	  if (err) return res.serverError(err);
+		// 	  console.log(results);
+		// 	  return res.send(200, results.rows);
+		// 	});
+
+		GameRoom.find(function foundRooms(err, rooms) {
+			GameRoom.subscribe(req.socket, rooms);
+			return res.ok(rooms);
+		});
+	},
+
+	unwatchrooms: function(req, res) {
+		if (!req.isSocket) {
+		  return res.badRequest('Only a socket request can use this endpoint!');
+		}
+
+		GameRoom.unwatch(req);
+
+		GameRoom.find(function foundRooms(err, rooms) {
+			GameRoom.unsubscribe(req, rooms);
+			return res.ok();
+		});
+	},
+
+	iamready: function(req, res) {
+		console.log('I am ready');
 		if(req.session.me) {
-			// var query = GameRoom.find().populate('ActiveRooms').populate('GameRoom').where({''})
-		}	
+			// roomid = req.param('roomid');
+			ActiveRooms.update({user: req.session.me}, {status: 'ready'}).exec(function(err, response) {
+				if(err) return res.badRequest(err);
+				else {
+					console.log(response);
+					ActiveRooms.publishUpdate(response.id, response, req);
+					return res.ok();
+				}
+			});
+		}
+		else
+			res.redirect('/');
+	},
+
+
+	startplaying: function(req, res) {
+		console.log('Inside start playing');
+		if(req.session.me) {
+			roomid = req.param('roomid');
+			GameRoom.findOne({id: roomid, owner: req.session.me}, function(err, gameroom) {
+				if(err) return res.badRequest(err);
+				else if(gameroom.length == 0) return res.badRequest('Room could not be found or you are not the owner of this room!');
+				else {
+					ActiveRooms.count({room: roomid}).exec(function(err, response) {
+						console.log(response);
+						if(err) return res.badRequest(err);
+						else if(response >= 2 && response <= 4) {
+							gameroom.status = 'playing';
+							gameroom.save();
+							return res.ok('Game has begun!');
+						}
+						else
+							res.badRequest('Cannot start game.');
+					});
+					
+				}
+			});
+		}
 		else {
 			res.redirect('/');
 		}
-	}
+	},
+
+	isroomfull: function(req, res) {
+		if(req.isSocket) {
+			console.log('Inside isRoomFull');
+			if(req.session.me) {
+				console.log("Logged in as: "+req.session.me);
+				id = req.params('id');
+				console.log("Room ID: "+id);
+
+			}
+			else {
+				return res.badRequest("can only be accessed by logged in users");
+			}
+		}
+		else
+			return res.badRequest('Can only be accessed via socket');
+	},
+
+	// rooms: function(req, res) {
+	// 	console.log("Insdie rooms");
+	// 	if(req.isSocket) {
+	// 		console.log("Inside socket rooms");
+	// 		ActiveRooms.query('select gameroom.id, gameroom.title, count(activerooms.room) as count from gameroom, activerooms where activerooms.room = gameroom.id and gameroom.status = "waiting" group by gameroom.id having count(activerooms.room) <= 3', function(err, results) {
+	// 		  if (err) return res.serverError(err);
+	// 		  console.log(results);
+	// 		  return res.send(200, results.rows);
+	// 		});
+	// 	}
+	// 	else {
+	// 		return res.badRequest('Can only be accessed via sockets');
+	// 	}
+		
+	// },
 };
 

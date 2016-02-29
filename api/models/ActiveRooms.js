@@ -14,7 +14,13 @@ module.exports = {
   	},
   	user: {
   		model: 'User'
-  	}
+  	},
+    status: {
+      type: 'string',
+      enum: ['joined room', 'ready', 'playing'],
+      defaultsTo: 'joined room',
+      required: false,
+    }
   },
 
   countUsersInRoom: function(inputs, cb) {
