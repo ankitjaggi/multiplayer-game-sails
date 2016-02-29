@@ -16,10 +16,13 @@ jQuery(function($){
 var players = [];
 
 
-var currentroomid = 0;
+var myRoomId = 0;
 
-var owner = '';
+var userid = '';
 
+var round = 1;
+
+var score = 0;
 // var socketIO = {
 	
 //     // var mySocketId = '',
@@ -114,7 +117,7 @@ var owner = '';
 io.socket.on('connect', function(){
     console.log("Yes! Connected. finally!!!");
     console.log(io.socket);
-    io.socket.get('/game/listavailablerooms');
+    io.socket.get('/game/subscriberooms');
 
     io.socket.on('gameroom', function printMessage(event) {
         console.log(event);
@@ -129,6 +132,41 @@ io.socket.on('connect', function(){
         }
     });
 
+    io.socket.on('playerJoined', function playerJoined(message) {
+        console.log(message);
+        newPlayerJoined(message);
+    });
+
+    io.socket.on('message', function parseMessage(event) {
+        console.log(event);
+    });
+
+    io.socket.on('playerReady', function nowReady(message) {
+        console.log("player is ready!!!!");
+        console.log(message);
+        updatePlayerStatus(message.id, 'Ready');
+    });
+
+    io.socket.on('gameStarted', function gameStarted(message) {
+        console.log("game has started");
+        showGameInit();
+    });
+
+    io.socket.on('roomUnavailable', function roomUnavailable(message) {
+        console.log("room gone!");
+        removeRoomFromScreen(message);
+    });
+
+    io.socket.on('sendQuestion', function parseQuestion(message) {
+        console.log(message);
+        showQuestion(message);
+    });
+
+    io.socket.on('answerDetails', function answer(data) {
+        console.log(data);
+        manipulateScores(data);
+    });
+
   });
 
 // socketIO.init();
@@ -140,19 +178,23 @@ $("#createroom").click(function() {
         // console.log(jwres);
         if(jwres.statusCode != 200) {
             console.log("Room not created...");
+            alert("Room not created!");
         }
         else {
             console.log("Room created");
-            players.push(res.room.title.split('\'')[0]);
-            currentroomid = res.room.id;
-            // io.socket.get('/game/unwatchrooms');
+            // players.push(res.room.title.split('\'')[0]);
+            myRoomId = res.room.roomid;
+            // io.socket.post('/game/unsubscriberooms', {roomid: res.room.id});
             // socketIO.onNewGameCreated(res.room);
+            $("#join").hide();
+            $("#room").show();
+            $("#index").hide();
         }
     });
-    $("#join").hide();
-    $("#host").show();
-    $("#index").hide();
+    
 });
+
+$("#start_game").click(startPlaying);
 
 $("#roomslist").on('click', '.join-room', function() {
     var button = $(this);
@@ -164,8 +206,11 @@ $("#roomslist").on('click', '.join-room', function() {
         console.log(res);
         // console.log(jwres);
         if(jwres.statusCode == 200) {
-            // io.socket.get('/game/unwatchrooms');
-            currentroomid = roomID;
+            // io.socket.post('/game/unsubscriberooms', {roomid: roomID});
+            myRoomId = roomID;
+            $("#index").hide();
+            $("#join").hide();
+            $("#room").show();
         }
         else {
             alert("Could not join room because: "+res.error);
@@ -173,10 +218,105 @@ $("#roomslist").on('click', '.join-room', function() {
     });
 });
 
+$("#get_ready").click(function() {
+    $.ajax('/game/iamready', {
+        success: function(data) {
+            console.log(data);
+            console.log('yayyy');
+            updatePlayerStatus(data.id, 'ready');
+        },
+        error: function(error) {
+            console.log(error.responseText);
+        }
+    });
+});
+
+function addPlayerToRoom(data) {
+    console.log(data);
+    count = $("#roomplayercount_"+data.roomid).text();
+    count += 1;
+    $("#roomplayercount_"+data.roomid).text(count);
+}
+
+function removeRoomFromScreen(message) {
+    console.log(message);
+    $("#join_"+message.roomid).closest('tr').remove();
+}
+
+function showGameInit() {
+    $("#index").hide();
+    $("#room").hide();
+    $("#join").hide();
+    $("#gamescreen").show();
+    $("#gamescreen").html("<h3>The game has begun!</h3>");
+    setTimeout(function() {
+        io.socket.post('/game/getquestion', {round: round, room: myRoomId});
+    }, 1000);
+}
+
+function showQuestion(data) {
+    $("#gamescreen").append(data.question);
+    var options = data.options;
+    var list = $('<ul/>').attr('id','options');
+
+    $.each(options, function(){
+        list                                
+            .append( $('<li/>')              
+                .append( $('<button/>')      
+                    .addClass('btnAnswer')   
+                    .addClass('btn')
+                    .addClass('btn-info')        
+                    .val(this)               
+                    .html(this)
+                )
+            )
+    });
+    $("#gamescreen").append(list);
+}
+
+$("#gamescreen").on('click', '.btnAnswer',function() {
+    var $btn = $(this); 
+    var answer = $btn.val();
+
+    console.log(answer);
+
+    var data = {
+        roomId: myRoomId,
+        answer: answer,
+        round: round,
+    }
+    console.log(data);
+    // io.socket.emit('playerAnswer', data);
+    io.socket.post('/game/checkanswer', data, function(res, jwres) {
+        if(jwres.statusCode != 200)
+            alert(res);
+        else {
+            console.log(res);
+        }
+    });
+
+    // $.ajax('/checkanswer', {
+    //     method: 'POST',
+    //     data: data,
+    //     success: function(response) {
+    //         console.log(response);
+    //     },
+    //     error: function(error) {
+    //         console.log(error.responseText);
+    //         alert(error.responseText);
+    //     }
+    // });
+});
+
+
+// function showRoom() {
+
+// }
 
 function newRoomCreated(data) {
-	alert("New Room has been created");
-    $("#roomslist").append("<tr><td>"+data.title+"</td><td><td><span id='roomplayercount_"+data.id+"'>1</span> / 4</td></td><td><button class='btn btn-default join-room' id='join_"+data.id+"'>Join</button>");
+	// alert("New Room has been created");
+    count = data.count | 1;
+    $("#roomslist").append("<tr id='room_"+data.roomid+"'><td>"+data.title+"</td><td><td><span id='roomplayercount_"+data.roomid+"'>"+count+"</span> / 4</td></td><td><button class='btn btn-default join-room' id='join_"+data.roomid+"'>Join</button>");
     $("#start_game").prop("disabled", true);
 }
 
@@ -188,19 +328,39 @@ function newPlayerJoined(data) {
         $("#start_game").show();
         $("#start_game").prop("disabled", false);
     }
-	$("#players").append("<tr><td>"+data.username+"</td><td>&nbsp;</td><td><span id='playerstatus_"+data.id+"'>"+data.status+"</span></td></tr>");
+	$("#players").append("<tr><td>"+data.username+"</td><td>&nbsp;</td><td><span id='playerstatus_"+data.userid+"'>"+data.status+"</span></td></tr>");
 }
 
-// getRooms();
+// showRooms();
 
-function getRooms(response) {
+fetchRooms();
+
+function fetchRooms() {
+    console.log("sskjfd");
+    $.ajax('/rooms', {
+        method: 'GET',
+        success: function(response) {
+            console.log(response);
+            showRooms(response);
+        },
+        error: function(error) {
+            console.log(error.responseText);
+        }
+    });
+}
+
+function showRooms(response) {
     console.log(response);
     var output = '';
-    $.each(response, function(index, value) {
-        console.log(index+" "+value);
-        output.append("<tr><td>"+value.title+"</td><td><span id='roomplayercount_"+value.id+"'>"+value.count+"</span> / 4</td>");
-    });
-    $("#roomslist").append(output);
+    if(response.length >= 1) {
+        $.each(response, function(index, value) {
+            console.log(index+" "+value);
+            newRoomCreated(value);
+            output += "<tr><td>"+value.title+"</td><td><span id='roomplayercount_"+value.roomid+"'>"+value.count+"</span> / 4</td>";
+        });
+        // $("#roomslist").append(output);
+    }
+    
 }
 
 function fetchPlayers(room) {
@@ -214,9 +374,10 @@ function updatePlayerCount(data) {
 function startPlaying() {
     $.ajax('/game/startplaying', {
         method: 'POST',
-        data: {roomid: currentroomid},
+        data: {roomid: myRoomId},
         success: function(response) {
             console.log(response);
+            // alert(response);
         },
         error: function(error) {
             console.log(error.responseText);
@@ -224,17 +385,25 @@ function startPlaying() {
     });
 }
 
-function getReady() {
-    $.ajax('/game/iamready', {
-        success: function(response) {
-            console.log(response);
-            updatePlayerStatus(response.id, 'ready');
-        },
-        error: function(error) {
-            console.log(error.responseText);
-        }
-    });
+function manipulateScores(data) {
+    if(data.status == 'correct')
+        score += 1;
+    else
+        score -= 1;
+    console.log(score);
 }
+
+// function getReady() {
+//     $.ajax('/game/iamready', {
+//         success: function(response) {
+//             console.log(response);
+//             updatePlayerStatus(response.id, 'ready');
+//         },
+//         error: function(error) {
+//             console.log(error.responseText);
+//         }
+//     });
+// }
 
 function updatePlayerStatus(user, status) {
     $("#playerstatus_"+user).text(status);

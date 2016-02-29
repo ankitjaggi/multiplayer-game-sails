@@ -5,11 +5,19 @@
  * @docs        :: http://sailsjs.org/documentation/concepts/models-and-orm/models
  */
 
+var crypto = require('crypto');
+
 module.exports = {
 
 	connection: 'localMysqlServer',
+  autoPK: false,
 
   attributes: {
+    roomid: {
+      type: 'string',
+      primaryKey: true,
+      unique: true,
+    },
   	title: {
   		type: 'string',
   	},
@@ -27,6 +35,21 @@ module.exports = {
 	    collection: 'ActiveRooms',
 	    via: 'user'
   	}
+  },
+
+  generateRoomId: function() {
+    var length = 10;
+    chars = "abcdefghijklmnopqrstuwxyzABCDEFGHIJKLMNOPQRSTUWXYZ0123456789";
+    var rnd = crypto.randomBytes(length)
+        , value = new Array(length)
+        , len = chars.length;
+
+    for (var i = 0; i < length; i++) {
+        value[i] = chars[rnd[i] % len]
+    };
+
+    return value.join('');
+   
   }
 };
 

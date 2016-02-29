@@ -8,10 +8,10 @@
 <!-- <a href="#" class="btn btn-warning" id="joinroom">Join Existing Room</a> -->
 </div>
 
-<div id="host">
+<div id="room">
 <h3>Players in the Room</h3>
-<h6 id="startgamediv"><button class="btn btn-info" id="start_game" disabled="disabled">Start Game</button></h6>
-<h6><button class="btn btn-default" id="get_ready">Get Ready</button></h6>
+<div id="startgamediv"><button class="btn btn-info" id="start_game" disabled="disabled">Start Game</button></div>
+<button class="btn btn-default" id="get_ready">Get Ready</button>
 <table id="players" class="table">
 
 </table>
@@ -24,11 +24,15 @@
 </table>
 </div>
 
+<div id="gamescreen">
+
+</div>
+
 </div>
 
 <script src="/js/jquery.2.2.1.min.js"></script>
 <script>
-$("#host").hide();
+$("#room").hide();
 $("#join").show();
 $("#index").show();
 

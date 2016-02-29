@@ -123,7 +123,7 @@ module.exports = {
 	    	});
 	    	req.session.me = null;
 	    	req.session.name = null;
-	    	req.sesion.destroy();
+	    	req.session.destroy();
 	    	console.log('Logged out successfully!');
 	        // If this is not an HTML-wanting browser, e.g. AJAX/sockets/cURL/etc.,
 	        // send a simple response letting the user agent know they were logged out
