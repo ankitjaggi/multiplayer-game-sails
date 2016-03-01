@@ -1,20 +1,6 @@
 jQuery(function($){
 
-
-// var socket = io.connect();
-// socket.on('connect', function socketConnected() {
-//     console.log("Socket connected");
-//     // console.log("Socket ID: "+ this.socket.sessionid);
-//     socket.get('/game/listavailablerooms');
-
-//     socket.on('joined', function userJoined(data) {
-//         console.log("user joined");
-//         console.log(data);
-//     });
-// });
-
 var players = [];
-
 
 var myRoomId = 0;
 
@@ -23,105 +9,18 @@ var userid = '';
 var round = 1;
 
 var score = 0;
-// var socketIO = {
-	
-//     // var mySocketId = '',
 
-// 	init: function() {
-//         socketIO.socket = io.connect();
-//         socketIO.bindEvents();
-//     },
-
-//     bindEvents: function() {
-
-        
-
-//     	socketIO.socket.on('connect', socketIO.onConnected );
-//         socketIO.socket.on('hostNewGame', socketIO.hostNewGame );
-//         socketIO.socket.on('onNewGameCreated', socketIO.onNewGameCreated);
-//         socketIO.socket.on('playerJoinedRoom', socketIO.playerJoinedRoom);
-//         socketIO.socket.on('joined', socketIO.joined);
-//         socketIO.socket.on('hello', socketIO.hello);
-
-//         socketIO.socket.get('/game/listavailablerooms');
-//         // socketIO.socket.on('beginNewGame', socketIO.beginNewGame );
-//         // socketIO.socket.on('newWordData', socketIO.onNewWordData);
-//         // socketIO.socket.on('hostCheckAnswer', socketIO.hostCheckAnswer);
-//         // socketIO.socket.on('gameOver', socketIO.gameOver);
-//         // socketIO.socket.on('error', socketIO.error );
-//     },
-
-//     onConnected: function(data) {
-//     	console.log("Connected");
-//     	console.log(data);
-//     	console.log(socketIO.socket);
-//         socketIO.mySocketId = socketIO.socket.socket.sessionid;
-//     },
-
-//     hostNewGame: function(data) {
-//     	// console.log(data);
-//     	socketIO.socket.post('/game/newroom', {}, function(res, jwres) {
-//             console.log(res);
-//             console.log(jwres);
-//             if(jwres.statusCode != 200) {
-//             	console.log("Room not created...");
-//             }
-//             else {
-//             	console.log("Room created");
-//             	socketIO.onNewGameCreated(res.room);
-//             }
-//         });
-
-//     	// socketIO.socket.emit('hostCreateNewGame');
-//     },
-
-//     joinGame: function(data) {
-
-//         socketIO.socket.post('/game/joinroom', {roomid: 2}, function(res, jwres) {
-//             console.log(res);
-//             console.log(jwres);
-//         });
-//     },
-
-//     onNewGameCreated: function(data) {
-//         console.log("Insdide on new game created");
-//     	console.log(data);
-//     	console.log("new room created");
-//     	newRoomCreated();
-//     	$("#host").show();
-//     	$("#index").hide();
-//     },
-
-//     playerJoinedRoom: function(data) {
-//     	console.log(data);
-//     	console.log("player joined room");
-//     	addPlayerToRoom(data);
-//     },
-
-//     hello: function(data) {
-//         console.log("Hello");
-//         alert("hello");
-//         console.log(data);
-//     },
-
-//     joined: function(data) {
-//         alert("Yes");
-//         console.log(data);
-//         console.log("player joined room");
-//     },
-
-
-// }
+var createRoom = 0;
 
 
 io.socket.on('connect', function(){
     console.log("Yes! Connected. finally!!!");
-    console.log(io.socket);
+    // console.log(io.socket);
     io.socket.get('/game/subscriberooms');
 
     io.socket.on('gameroom', function printMessage(event) {
-        console.log(event);
-        console.log(event.verb);
+        // console.log(event);
+        // console.log(event.verb);
         switch(event.verb) {
             case 'created': newRoomCreated(event.data);
                             break;
@@ -133,38 +32,50 @@ io.socket.on('connect', function(){
     });
 
     io.socket.on('playerJoined', function playerJoined(message) {
-        console.log(message);
+        // console.log('player joined');
+        // console.log(message);
         newPlayerJoined(message);
     });
 
     io.socket.on('message', function parseMessage(event) {
-        console.log(event);
+        // console.log(event);
     });
 
     io.socket.on('playerReady', function nowReady(message) {
-        console.log("player is ready!!!!");
-        console.log(message);
+        // console.log("player is ready!!!!");
+        // console.log(message);
         updatePlayerStatus(message.id, 'Ready');
     });
 
     io.socket.on('gameStarted', function gameStarted(message) {
-        console.log("game has started");
+        // console.log("game has started");
         showGameInit();
     });
 
-    io.socket.on('roomUnavailable', function roomUnavailable(message) {
-        console.log("room gone!");
+    io.socket.on('roomFull', function roomUnavailable(message) {
+        // console.log("room gone!");
+        removeRoomFromScreen(message);
+    });
+
+    io.socket.on('roomStartedPlay', function startedPlay(message) {
+        // console.log('started play');
         removeRoomFromScreen(message);
     });
 
     io.socket.on('sendQuestion', function parseQuestion(message) {
-        console.log(message);
+        // console.log(message);
         showQuestion(message);
     });
 
     io.socket.on('answerDetails', function answer(data) {
-        console.log(data);
+        // console.log(data);
         manipulateScores(data);
+        getQuestion();
+    });
+
+    io.socket.on('gameOver', function gameOver() {
+        // console.log('game over');
+        finishGame();
     });
 
   });
@@ -173,19 +84,17 @@ io.socket.on('connect', function(){
 
 $("#createroom").click(function() {
 	// socketIO.hostNewGame();
+    createRoom = 1;
     io.socket.post('/game/newroom', {}, function(res, jwres) {
         // console.log(res.room.owner);
         // console.log(jwres);
         if(jwres.statusCode != 200) {
-            console.log("Room not created...");
-            alert("Room not created!");
+            alert("Room not created!: "+res);
+            createRoom = 0;
         }
         else {
-            console.log("Room created");
             // players.push(res.room.title.split('\'')[0]);
             myRoomId = res.room.roomid;
-            // io.socket.post('/game/unsubscriberooms', {roomid: res.room.id});
-            // socketIO.onNewGameCreated(res.room);
             $("#join").hide();
             $("#room").show();
             $("#index").hide();
@@ -199,21 +108,16 @@ $("#start_game").click(startPlaying);
 $("#roomslist").on('click', '.join-room', function() {
     var button = $(this);
     var buttonID = $(this).attr('id');
-    console.log(buttonID);
     var roomID = buttonID.split('_')[1];
-    console.log(roomID);
     io.socket.post('/game/joinroom', {roomid: roomID}, function(res, jwres) {
-        console.log(res);
-        // console.log(jwres);
         if(jwres.statusCode == 200) {
-            // io.socket.post('/game/unsubscriberooms', {roomid: roomID});
             myRoomId = roomID;
             $("#index").hide();
             $("#join").hide();
             $("#room").show();
         }
         else {
-            alert("Could not join room because: "+res.error);
+            alert("Could not join room because: "+res);
         }
     });
 });
@@ -221,25 +125,25 @@ $("#roomslist").on('click', '.join-room', function() {
 $("#get_ready").click(function() {
     $.ajax('/game/iamready', {
         success: function(data) {
-            console.log(data);
-            console.log('yayyy');
+            // console.log(data);
+            // console.log('yayyy');
             updatePlayerStatus(data.id, 'ready');
         },
         error: function(error) {
-            console.log(error.responseText);
+            console.log(error);
         }
     });
 });
 
 function addPlayerToRoom(data) {
-    console.log(data);
-    count = $("#roomplayercount_"+data.roomid).text();
+    // console.log(data);
+    var count = $("#roomplayercount_"+data.roomid).text();
     count += 1;
     $("#roomplayercount_"+data.roomid).text(count);
 }
 
 function removeRoomFromScreen(message) {
-    console.log(message);
+    // console.log(message);
     $("#join_"+message.roomid).closest('tr').remove();
 }
 
@@ -249,9 +153,11 @@ function showGameInit() {
     $("#join").hide();
     $("#gamescreen").show();
     $("#gamescreen").html("<h3>The game has begun!</h3>");
-    setTimeout(function() {
-        io.socket.post('/game/getquestion', {round: round, room: myRoomId});
-    }, 1000);
+    setTimeout(getQuestion, 1000);
+}
+
+function getQuestion() {
+    io.socket.post('/game/getquestion', {round: round, room: myRoomId});
 }
 
 function showQuestion(data) {
@@ -278,34 +184,24 @@ $("#gamescreen").on('click', '.btnAnswer',function() {
     var $btn = $(this); 
     var answer = $btn.val();
 
-    console.log(answer);
+    // console.log(answer);
 
     var data = {
         roomId: myRoomId,
         answer: answer,
         round: round,
     }
-    console.log(data);
+    // console.log(data);
     // io.socket.emit('playerAnswer', data);
     io.socket.post('/game/checkanswer', data, function(res, jwres) {
         if(jwres.statusCode != 200)
             alert(res);
         else {
-            console.log(res);
+            // console.log(res);
         }
     });
 
-    // $.ajax('/checkanswer', {
-    //     method: 'POST',
-    //     data: data,
-    //     success: function(response) {
-    //         console.log(response);
-    //     },
-    //     error: function(error) {
-    //         console.log(error.responseText);
-    //         alert(error.responseText);
-    //     }
-    // });
+
 });
 
 
@@ -322,13 +218,21 @@ function newRoomCreated(data) {
 
 function newPlayerJoined(data) {
     console.log(data);
-    players.push(data.username);
-    console.log(players);
-    if (players.length >= 2) {
-        $("#start_game").show();
-        $("#start_game").prop("disabled", false);
-    }
-	$("#players").append("<tr><td>"+data.username+"</td><td>&nbsp;</td><td><span id='playerstatus_"+data.userid+"'>"+data.status+"</span></td></tr>");
+    // if(data.roomid == myRoomId) {
+        players.push(data.username);
+        console.log(players);
+        if (players.length >= 2) {
+            $("#start_game").show();
+            $("#start_game").prop("disabled", false);
+        }
+        $("#players").append("<tr><td>"+data.username+"</td><td>&nbsp;</td><td><span id='playerstatus_"+data.userid+"'>"+data.status+"</span></td></tr>");
+    // }
+    // else {
+        // var currentCount = +$("#roomplayercount_"+data.roomid).text();
+        // currentCount += 1;
+        // $("#roomplayercount_"+data.roomid).text(currentCount);
+    // }
+    
 }
 
 // showRooms();
@@ -344,7 +248,7 @@ function fetchRooms() {
             showRooms(response);
         },
         error: function(error) {
-            console.log(error.responseText);
+            console.log(error);
         }
     });
 }
@@ -363,9 +267,18 @@ function showRooms(response) {
     
 }
 
-function fetchPlayers(room) {
-    console.log('here to fetch players');
-}
+// function fetchPlayers(room) {
+//     console.log('here to fetch players');
+//     io.socket.post('/game/fetchplayers', {roomid: room}, function(res, jwres) {
+//         if(jwres.statusCode != 200) alert(res);
+//         else {
+//             for(var i=0; i<res.length; i++) {
+//                 newPlayerJoined()
+//             }
+//         }
+        
+//     });
+// }
 
 function updatePlayerCount(data) {
 
@@ -380,7 +293,8 @@ function startPlaying() {
             // alert(response);
         },
         error: function(error) {
-            console.log(error.responseText);
+            console.log(error);
+            alert(error);
         }
     });
 }
@@ -390,7 +304,14 @@ function manipulateScores(data) {
         score += 1;
     else
         score -= 1;
+    round += 1;
     console.log(score);
+}
+
+function finishGame() {
+    io.socket.post('/game/endgame', {roomid: myRoomId});
+    $("#room").text("The game is over!<br><a href='/game' class='btn btn-default'>New Game?</a>");
+
 }
 
 // function getReady() {

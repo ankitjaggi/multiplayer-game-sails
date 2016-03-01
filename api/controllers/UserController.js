@@ -70,13 +70,13 @@ module.exports = {
 	      }, function (err, usr) {
 	        if(err) {
 	          console.log("Inside error");
-	          return res.serverError("DB Error");
+	          return res.badRequest(err);
 	          
 
 	        }
 	        else if(usr) {
 	          console.log("Found user...");
-	          return res.send(400, {error: "Username already exists"});
+	          return res.badRequest('Username already exists');
 	      		
 	        }
 	        else {
@@ -90,6 +90,7 @@ module.exports = {
 	          	
 	          	if(err) {
 	          		console.log(err);
+	          		return res.badRequest(err);
 	          	}
 	          	else if(user) {
 	          		req.session.me = user.id;
@@ -104,13 +105,12 @@ module.exports = {
 	          	}
 	          	
 	          });
-	        
-
 	        }
 	    });
 
 
     },
+    
     logout: function(req, res) {
     	if(req.session.me) {
     		console.log("Logging out...");
@@ -125,27 +125,21 @@ module.exports = {
 	    	req.session.name = null;
 	    	req.session.destroy();
 	    	console.log('Logged out successfully!');
-	        // If this is not an HTML-wanting browser, e.g. AJAX/sockets/cURL/etc.,
-	        // send a simple response letting the user agent know they were logged out
-	        // successfully.
 	        if (req.wantsJSON) {
 	            return res.ok('Logged out successfully!');
 	        }
     	}
     	
-
-        // Otherwise if this is an HTML-wanting browser, do a redirect.
         return res.redirect('/');
     },
 
     changeStatus: function(req, res) {
-    	console.log("Changing status fo user...");
+    	console.log("Changing status of user...");
     	User.findOne({id: req.param('id')}).exec(function(err, user) {
 	        if (err) {
 	            return res.negotiate(err);
 	        }
 	        else {
-	            // req.session.me.status = req.param('status');
 	            user.status = req.param('status');
 	            user.save();
 	        }

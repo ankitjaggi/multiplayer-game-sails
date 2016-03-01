@@ -32,6 +32,7 @@ module.exports = {
     // console.log(inputs.roomId);
     // console.log(inputs.userId);
     ActiveRooms.find({room: inputs.roomId, user: inputs.userId}).exec(cb);
-  }
+  },
+
 };
 
